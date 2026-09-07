@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.5-alpine
+        env:
+          POSTGRES_DB: cms_test
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: cms-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cms -d cms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://cms:cms-test-password@127.0.0.1:5432/cms_test
+      PAYLOAD_SECRET: ci-only-secret-not-used-in-production-000000000000000
+      SERVER_URL: http://localhost:3000
+      ALLOWED_ORIGINS: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm generate:importmap
+      - run: pnpm generate:types
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm build

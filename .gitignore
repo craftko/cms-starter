@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+
+# local environment
+.env
+.env.local
+.env.production
+!.env.example
+
+# uploads and database data
+media/*
+!media/.gitkeep
+postgres-data/
+
+# logs and tooling
+*.log
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+*.tsbuildinfo
+src/payload-types.ts

@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cms}
+      POSTGRES_USER: ${POSTGRES_USER:-cms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cms-local-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cms} -d ${POSTGRES_DB:-cms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cms_internal
+
+  cms:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cms:cms-local-password@postgres:5432/cms}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in .env}
+      SERVER_URL: ${SERVER_URL:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      PAYLOAD_DB_PUSH: ${PAYLOAD_DB_PUSH:-true}
+    ports:
+      - "3000:3000"
+    volumes:
+      - media_data:/app/media
+    networks:
+      - cms_internal
+      - cms_public
+
+volumes:
+  postgres_data:
+  media_data:
+
+networks:
+  cms_internal:
+    internal: true
+  cms_public:
